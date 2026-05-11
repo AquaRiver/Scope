@@ -1,15 +1,15 @@
-#PebbleTasks - TasksApp
+## PebbleTasks - TasksApp
 
 A simple CLI Task Manager app built with python
 
-##Features
+## Features
 - Add Tasks
 - Show Tasks
 - Save Tasks using JSON
 - Mark Tasks as complete
 - Delete Tasks
 
-##Technologies Used
+## Technologies Used
 - Python
 - JSON
 - File handling
