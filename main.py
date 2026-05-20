@@ -1,19 +1,20 @@
 import json
 
+#defining required functions
 def save_json():
     try:
-        with open("todo.txt", "w") as f:
+        with open("tasks.json", "w") as f:
             json.dump(tasks, f)
-    except:
+    except FileNotFoundError:
         return None
 
 
 def load_json():
     try:
-        with open("todo.txt") as f:
+        with open("tasks.json") as f:
             return json.load(f)
     except:
-        print('File named "todo.txt" doesn\'t exist')
+        print('File named "tasks.json" doesn\'t exist')
         return []
     
 tasks = load_json()
@@ -30,6 +31,7 @@ def add_task():
 
     if new_task == "" :
         print("Enter a valid task")
+		return
     else:
         tasks.append({"task": new_task, "status": "incomplete"})
 
@@ -41,11 +43,12 @@ def delete_task(index : int):
     save_json()
 
 def mark_taskcomplete(tasknum : int):
+    if tasknum < 0 or tasknum >= len(tasks):
+		print("Tasks doesn't exist")
     tasks[tasknum]["status"] = "completed"
     save_json()
 
-
-
+#loop starts here
 while True:
     print(
         """---Menu---
@@ -77,7 +80,7 @@ while True:
         try:
             tasknum = int(input("Enter the number of task you want to mark as complete. "))
             mark_taskcomplete(tasknum - 1)
-        except:
+        except ValueError:
             print("Enter a valid number")
     elif choice == "5":
         break
