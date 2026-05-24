@@ -35,4 +35,4 @@ python main.py
 - Categories
 
 ## Author
-Rivlet
+River
