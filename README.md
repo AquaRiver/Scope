@@ -1,38 +1,6 @@
-## PebbleTasks - TasksApp
+## Scope
 
-A simple CLI Task Manager app built with python
-
-## Features
-- Add Tasks
-- Show Tasks
-- Save Tasks using JSON
-- Mark Tasks as complete
-- Delete Tasks
-
-## Technologies Used
-- Python
-- JSON
-- File handling
-
-## How to Run
-
-Clone the repository:
-
-```bash
-git clone https://github.com/BlueCloudyRiver/Scope
-```
-
-Run the program:
-
-```bash
-python main.py
-```
-
-## Future Improvements
-- Task priorities
-- Due dates
-- Colored terminal output
-- Categories
+You can find all my old projects here
 
 ## Author
-River
+[River](https://github.com/BlueCloudyRiver)
