@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
-	"sync"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Task struct {
@@ -14,42 +14,72 @@ type Task struct {
 	Done  bool   `json:"done"`
 }
 
-var (
-	tasks     = []Task{}
-	idCounter = 1
-	mu        sync.Mutex
-)
+var tasks []Task
 
 func createTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+	var task Task
+
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, "Invalid Json", http.StatusBadRequest)
 		return
 	}
 
-	var t Task
-	err := json.NewDecoder(r.Body).Decode(&t)
-	if err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	mu.Lock()
-	t.ID = idCounter
-	idCounter++
-	tasks = append(tasks, t)
-	mu.Unlock()
+	tasks = append(tasks, task)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(task)
+}
+
+func listTasks(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(tasks)
+}
+
+func getTaskById(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	for i, task := range tasks {
+		if task.ID == id {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(tasks[i])
+			return
+		}
+	}
+
+	http.Error(w, "Task not found", http.StatusNotFound)
+}
+
+func deleteTask(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	for i, task := range tasks {
+		if task.ID == id {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+	}
+
+	http.Error(w, "No task found", http.StatusNotFound)
 }
 
 func updateTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Only PUT method is allowed", http.StatusMethodNotAllowed)
-		return
-	}
+	idStr := chi.URLParam(r, "id")
 
-	idStr := r.URL.Query().Get("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
@@ -57,14 +87,10 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var updated Task
-	err = json.NewDecoder(r.Body).Decode(&updated)
-	if err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&updated); err != nil {
+		http.Error(w, "Invalid Json", http.StatusBadRequest)
 		return
 	}
-
-	mu.Lock()
-	defer mu.Unlock()
 
 	for i, task := range tasks {
 		if task.ID == id {
@@ -76,69 +102,18 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	http.Error(w, "No task found", http.StatusNotFound)
-}
-
-func deleteTask(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Only DELETE Method is allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid number", http.StatusBadRequest)
-		return
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-
-	for i, task := range tasks {
-		if task.ID == id {
-			tasks = append(tasks[:i], tasks[i+1:]...)
-			return
-		}
-	}
 
 	http.Error(w, "Task not found", http.StatusNotFound)
 }
 
-func listTasks(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
-}
-
 func main() {
-	http.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			listTasks(w, r)
-		case http.MethodPost:
-			createTask(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-	http.HandleFunc("/tasks/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodDelete:
-			deleteTask(w, r)
-		case http.MethodPut:
-			updateTask(w, r)
-		}
+	r := chi.NewRouter()
 
-	})
+	r.Get("/tasks", listTasks)
+	r.Get("/tasks/{id}", getTaskById)
+	r.Delete("/tasks/{id}", deleteTask)
+	r.Put("/tasks/{id}", updateTask)
+	r.Post("/task", createTask)
 
-	log.Println("Server running on port :8000")
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	http.ListenAndServe(":8000", r)
 }
